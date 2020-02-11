@@ -13,15 +13,6 @@
  */
 package com.querydsl.sql;
 
-import static com.google.common.base.CharMatcher.inRange;
-
-import java.lang.reflect.Field;
-import java.sql.Types;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -32,6 +23,16 @@ import com.querydsl.core.QueryFlag.Position;
 import com.querydsl.core.types.*;
 import com.querydsl.sql.dml.SQLInsertBatch;
 import com.querydsl.sql.types.Type;
+
+import java.lang.reflect.Field;
+import java.sql.Types;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import static com.google.common.base.CharMatcher.inRange;
 
 /**
  * {@code SQLTemplates} extends {@link Templates} to provides SQL specific extensions
@@ -59,16 +60,18 @@ public class SQLTemplates extends Templates {
 
     protected static final Set<? extends Operator> OTHER_LIKE_CASES
             = Sets.immutableEnumSet(Ops.ENDS_WITH, Ops.ENDS_WITH_IC,
-                    Ops.LIKE_IC, Ops.LIKE_ESCAPE_IC,
-                    Ops.STARTS_WITH, Ops.STARTS_WITH_IC,
-                    Ops.STRING_CONTAINS, Ops.STRING_CONTAINS_IC);
+            Ops.LIKE_IC, Ops.LIKE_ESCAPE_IC,
+            Ops.STARTS_WITH, Ops.STARTS_WITH_IC,
+            Ops.STRING_CONTAINS, Ops.STRING_CONTAINS_IC);
 
     private static final CharMatcher NON_UNDERSCORE_ALPHA_NUMERIC =
             CharMatcher.is('_').or(inRange('a', 'z').or(inRange('A', 'Z'))).or(inRange('0', '9'))
-            .negate().precomputed();
+                    .negate().precomputed();
 
     private static final CharMatcher NON_UNDERSCORE_ALPHA =
             CharMatcher.is('_').or(inRange('a', 'z').or(inRange('A', 'Z'))).negate().precomputed();
+
+    private static final Pattern SUB_SELECT_PATTERN = Pattern.compile("\\(.*(?i)\\SELECT\\b.*\\)");
 
     private final Set<String> reservedWords;
 
@@ -829,7 +832,9 @@ public class SQLTemplates extends Templates {
     }
 
     protected boolean requiresQuotes(final String identifier, final boolean precededByDot) {
-        if (NON_UNDERSCORE_ALPHA_NUMERIC.matchesAnyOf(identifier)) {
+        if (SUB_SELECT_PATTERN.matcher(identifier).matches()) {
+            return false;
+        } else if (NON_UNDERSCORE_ALPHA_NUMERIC.matchesAnyOf(identifier)) {
             return true;
         } else if (NON_UNDERSCORE_ALPHA.matches(identifier.charAt(0))) {
             return true;
