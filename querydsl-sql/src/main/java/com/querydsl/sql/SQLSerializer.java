@@ -13,11 +13,6 @@
  */
 package com.querydsl.sql;
 
-import java.sql.Types;
-import java.util.*;
-
-import javax.annotation.Nullable;
-
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -34,6 +29,10 @@ import com.querydsl.core.types.Template.Element;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.sql.dml.SQLInsertBatch;
 import com.querydsl.sql.types.Null;
+
+import javax.annotation.Nullable;
+import java.sql.Types;
+import java.util.*;
 
 /**
  * {@code SqlSerializer} serializes SQL clauses into SQL
@@ -468,15 +467,27 @@ public class SQLSerializer extends SerializerBase<SQLSerializer> {
 
         boolean originalDmlWithSchema = dmlWithSchema;
         dmlWithSchema = true;
-        handle(entity);
+        handleTargetForNonQuery(metadata, entity);
         dmlWithSchema = originalDmlWithSchema;
 
-        if (metadata.getWhere() != null) {
-            serializeForWhere(metadata);
+        serializeForWhere(metadata);
+    }
+
+    protected void handleTargetForNonQuery(QueryMetadata metadata, RelationalPath<?> entity) {
+        List<JoinExpression> joins = metadata.getJoins();
+        if (joins.isEmpty()) {
+            handle(entity);
+        } else if (joins.size() > 1) {
+            throw new IllegalStateException("Non query cannot have several targets, " + joins);
+        } else {
+            handleJoinTarget(joins.get(0));
         }
     }
 
     protected void serializeForWhere(QueryMetadata metadata) {
+        if (metadata.getWhere() == null) {
+            return;
+        }
         boolean requireSchemaInWhere = templates.isRequiresSchemaInWhere();
         boolean originalDmlWithSchema = dmlWithSchema;
 
@@ -507,7 +518,7 @@ public class SQLSerializer extends SerializerBase<SQLSerializer> {
 
         boolean originalDmlWithSchema = dmlWithSchema;
         dmlWithSchema = true;
-        handle(entity);
+        handleTargetForNonQuery(metadata, entity);
         dmlWithSchema = originalDmlWithSchema;
         append(" ");
         // columns
@@ -576,7 +587,7 @@ public class SQLSerializer extends SerializerBase<SQLSerializer> {
 
         boolean originalDmlWithSchema = dmlWithSchema;
         dmlWithSchema = true;
-        handle(entity);
+        handleTargetForNonQuery(metadata, entity);
         dmlWithSchema = originalDmlWithSchema;
         // columns
         if (!columns.isEmpty()) {
@@ -631,7 +642,7 @@ public class SQLSerializer extends SerializerBase<SQLSerializer> {
 
         boolean originalDmlWithSchema = dmlWithSchema;
         dmlWithSchema = true;
-        handle(entity);
+        handleTargetForNonQuery(metadata, entity);
         dmlWithSchema = originalDmlWithSchema;
         append("\n");
         append(templates.getSet());
@@ -651,9 +662,7 @@ public class SQLSerializer extends SerializerBase<SQLSerializer> {
         }
         skipParent = false;
 
-        if (metadata.getWhere() != null) {
-            serializeForWhere(metadata);
-        }
+        serializeForWhere(metadata);
     }
 
     protected void serializeSources(List<JoinExpression> joins) {
@@ -778,7 +787,6 @@ public class SQLSerializer extends SerializerBase<SQLSerializer> {
         stage = oldStage;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void visitConstant(Object constant) {
         if (useLiterals) {
