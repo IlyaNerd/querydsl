@@ -19,6 +19,8 @@ import static org.junit.Assert.assertTrue;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
@@ -28,6 +30,10 @@ import org.junit.Test;
 import com.querydsl.core.types.*;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberPath;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 public class SQLTemplatesTest {
 
@@ -115,4 +121,30 @@ public class SQLTemplatesTest {
         assertEquals("intPath - (intPath2 + ?)", serializer.toString());
     }
 
+
+    @RunWith(Parameterized.class)
+    public static class QuoteSubSelect {
+
+        @Parameters
+        public static Collection<String> data() {
+            return Arrays.asList(
+                    "(select * from some_table where col1=?)",
+                    "( select * from some_table)",
+                    "( select * from some_table )",
+                    "( SELECT * from some_table )",
+                    "  ( SELECT * from some_table )",
+                    "( selECT * from some_table )",
+                    "( selECT * from some_table where id in (select id from other_table) )"
+            );
+        }
+
+        @Parameter
+        String subSelect;
+
+        @Test
+        public void noQuotesForSubSelect() {
+            SQLTemplates templates = SQLTemplates.DEFAULT;
+            assertEquals(subSelect, templates.quoteIdentifier(subSelect));
+        }
+    }
 }
