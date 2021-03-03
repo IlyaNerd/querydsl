@@ -13,19 +13,9 @@
  */
 package com.querydsl.sql.codegen;
 
-import com.querydsl.codegen.EntitySerializer;
-import com.querydsl.codegen.EntityType;
-import com.querydsl.codegen.GeneratedAnnotationResolver;
-import com.querydsl.codegen.Property;
-import com.querydsl.codegen.SerializerConfig;
-import com.querydsl.codegen.TypeMappings;
+import com.querydsl.codegen.*;
 import com.querydsl.codegen.utils.CodeWriter;
-import com.querydsl.codegen.utils.model.ClassType;
-import com.querydsl.codegen.utils.model.Parameter;
-import com.querydsl.codegen.utils.model.SimpleType;
-import com.querydsl.codegen.utils.model.Type;
-import com.querydsl.codegen.utils.model.TypeCategory;
-import com.querydsl.codegen.utils.model.Types;
+import com.querydsl.codegen.utils.model.*;
 import com.querydsl.sql.ColumnMetadata;
 import com.querydsl.sql.ForeignKey;
 import com.querydsl.sql.PrimaryKey;
@@ -39,19 +29,9 @@ import javax.inject.Named;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import static com.querydsl.codegen.utils.Symbols.COMMA;
-import static com.querydsl.codegen.utils.Symbols.NEW;
-import static com.querydsl.codegen.utils.Symbols.SUPER;
+import static com.querydsl.codegen.utils.Symbols.*;
 
 /**
  * {@code MetaDataSerializer} defines the Query type serialization logic for {@link MetaDataExporter}.
@@ -105,10 +85,10 @@ public class MetaDataSerializer extends EntitySerializer {
             @Named(SQLCodegenModule.COLUMN_COMPARATOR) Comparator<Property> columnComparator,
             @Named(SQLCodegenModule.ENTITYPATH_TYPE) Class<?> entityPathType,
             @Named(SQLCodegenModule.GENERATED_ANNOTATION_CLASS) Class<? extends Annotation> generatedAnnotationClass) {
-        super(typeMappings, Collections.<String>emptyList(), generatedAnnotationClass);
+        super(typeMappings, Collections.emptyList(), generatedAnnotationClass);
         this.namingStrategy = namingStrategy;
         this.innerClassesForKeys = innerClassesForKeys;
-        this.imports = new HashSet<String>(imports);
+        this.imports = new HashSet<>(imports);
         this.columnComparator = columnComparator;
         this.entityPathType = entityPathType;
     }
@@ -136,21 +116,22 @@ public class MetaDataSerializer extends EntitySerializer {
 
         String localName = writer.getRawName(model);
         String genericName = writer.getGenericName(true, model);
+        String classCast = localName.equals(genericName) ? "" : "(Class) ";
 
         if (!localName.equals(genericName)) {
             writer.suppressWarnings("all");
         }
         writer.beginConstructor(new Parameter("variable", Types.STRING),
-                                new Parameter("schema", Types.STRING),
-                                new Parameter("table", Types.STRING));
-        writer.line(SUPER,"(", writer.getClassConstant(localName) + COMMA
+                new Parameter("schema", Types.STRING),
+                new Parameter("table", Types.STRING));
+        writer.line(SUPER, "(", classCast + writer.getClassConstant(localName) + COMMA
                 + "forVariable(variable), schema, table);");
         constructorContent(writer, model);
         writer.end();
 
         writer.beginConstructor(new Parameter("variable", Types.STRING),
-                                new Parameter("schema", Types.STRING));
-        writer.line(SUPER, "(", writer.getClassConstant(localName), COMMA,
+                new Parameter("schema", Types.STRING));
+        writer.line(SUPER, "(", classCast + writer.getClassConstant(localName), COMMA,
                 "forVariable(variable), schema, \"", model.getData().get("table").toString(), "\");");
         constructorContent(writer, model);
         writer.end();
@@ -239,8 +220,8 @@ public class MetaDataSerializer extends EntitySerializer {
     }
 
     protected void writeUserImports(CodeWriter writer) throws IOException {
-        Set<String> packages = new HashSet<String>();
-        Set<String> classes = new HashSet<String>();
+        Set<String> packages = new HashSet<>();
+        Set<String> classes = new HashSet<>();
 
         for (String javaImport : imports) {
             //true if the character next to the dot is an upper case or if no dot is found (-1+1=0) the first character
