@@ -179,8 +179,6 @@ public class OracleTemplates extends SQLTemplates {
             case Types.TIME:
             case TIME_WITH_TIMEZONE:
                 return "timestamp '1970-01-01 " + literal + "'";
-            case Types.BOOLEAN:
-                return literal.equals("1") ? "1=1" : "1!=1";
             default:
                 return super.serialize(literal, jdbcType);
         }
@@ -193,11 +191,11 @@ public class OracleTemplates extends SQLTemplates {
 
             if (mod.getOffset() == null) {
                 context.append(limitQueryStart);
-                context.serializeForQuery(metadata, false);
+                context.serializeForQuery(metadata, forCountRow);
                 context.handle(limitQueryEnd, mod.getLimit());
             } else {
                 context.append(outerQueryStart);
-                context.serializeForQuery(metadata, false);
+                context.serializeForQuery(metadata, forCountRow);
                 context.append(outerQueryEnd);
 
                 if (mod.getLimit() == null) {
